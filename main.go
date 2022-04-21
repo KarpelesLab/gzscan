@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -19,6 +20,7 @@ import (
 
 var (
 	flagThreads = flag.Int("threads", runtime.NumCPU()*2, "change the number of threads used to scan the file")
+	tryRead     = flag.Int("try_read", 32, "attempt to read N bytes from compressed file (0 to disable)")
 )
 
 func main() {
@@ -165,12 +167,38 @@ func performScan(thread int, position []uint64, fil *os.File, start, end int64) 
 			info = append(info, "flag=FCOMMENT")
 		}
 
+		// ok, let's try to read a few bytes from this
+		if *tryRead > 0 {
+			gzr, err := gzip.NewReader(bytes.NewReader(buf))
+			if err != nil {
+				info = append(info, fmt.Sprintf("err=%s", err))
+			} else {
+				tmp := make([]byte, *tryRead)
+				n, err := gzr.Read(tmp)
+				if err != nil && err != io.EOF {
+					info = append(info, fmt.Sprintf("err=%s", err))
+				} else {
+					tmp = tmp[:n]
+					makePrintable(tmp)
+					info = append(info, fmt.Sprintf("start=%s", tmp))
+				}
+			}
+		}
+
 		log.Printf("found likely gzip: pos=%d stamp=%s %s", pos, time.Unix(int64(ts), 0), strings.Join(info, " "))
 
 		pos += 3
 		r.Discard(3)
 	}
 	return nil
+}
+
+func makePrintable(buf []byte) {
+	for n, b := range buf {
+		if b < 32 || b > 126 {
+			buf[n] = '.'
+		}
+	}
 }
 
 func getOsName(os byte) string {
