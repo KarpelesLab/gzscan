@@ -139,8 +139,13 @@ func performScan(thread int, position []uint64, fil *os.File, start, end int64) 
 		if flags&0x04 == 0x04 {
 			xlen := binary.LittleEndian.Uint16(payload[:2])
 			if xlen > 0 {
-				xtra := payload[2 : xlen+2]
-				info = append(info, fmt.Sprintf("extra=%s", hex.EncodeToString(xtra)))
+				if xlen > 32 {
+					xtra := payload[2 : 32+2]
+					info = append(info, fmt.Sprintf("extra=%s...", hex.EncodeToString(xtra)))
+				} else {
+					xtra := payload[2 : xlen+2]
+					info = append(info, fmt.Sprintf("extra=%s", hex.EncodeToString(xtra)))
+				}
 			}
 			payload = payload[xlen+2:]
 		}
