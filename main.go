@@ -43,12 +43,12 @@ func doit() error {
 		return fmt.Errorf("while opening %s: %w", args[0], err)
 	}
 
-	st, err := fil.Stat()
+	size, err := fil.Seek(0, io.SeekEnd)
 	if err != nil {
 		return err
 	}
+	fil.Seek(0, io.SeekStart) // set pointer back to start, just in case
 
-	size := st.Size()
 	threads := *flagThreads
 	interval := size / int64(threads)
 	var wg sync.WaitGroup
