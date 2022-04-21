@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 )
 
+// this is like https://pkg.go.dev/io#SectionReader but with atomicPos updated
 type threadReader struct {
 	atomicPos *uint64
 	pos       int64

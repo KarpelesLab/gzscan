@@ -2,7 +2,11 @@
 
 This scans for gzip files in a file or disk image, and can do so with multiple threads (useful if source is SSD/NVMe).
 
-Usage:
+## Installation
+
+	go install github.com/KarpelesLab/gzscan@latest
+
+## Usage
 
 	gzscan /dev/sda
 
