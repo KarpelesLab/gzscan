@@ -1,3 +1,17 @@
+// Package main provides gzscan, a multi-threaded gzip file scanner.
+//
+// gzscan scans files or block devices (such as disk images) for gzip headers,
+// enabling recovery of gzip-compressed data from raw storage. It uses parallel
+// scanning with configurable thread count to maximize throughput on SSDs and NVMe drives.
+//
+// Usage:
+//
+//	gzscan [flags] <file>
+//
+// Flags:
+//
+//	-threads N     Number of scanning threads (default: 2x CPU cores)
+//	-try_read N    Bytes to attempt reading from each gzip stream (default: 32, 0 to disable)
 package main
 
 import (
@@ -32,6 +46,9 @@ func main() {
 	}
 }
 
+// doit performs the main scanning operation. It opens the target file,
+// determines its size, and spawns multiple goroutines to scan different
+// portions of the file in parallel for gzip headers.
 func doit() error {
 	args := flag.Args()
 	if len(args) != 1 {
@@ -87,6 +104,12 @@ func doit() error {
 	}
 }
 
+// performScan scans a portion of the file for gzip headers.
+// It reads through the specified byte range [start, end) looking for the gzip
+// magic bytes (0x1f 0x8b 0x08), then validates the header structure and extracts
+// metadata such as timestamp, originating OS, filename, and optional extra fields.
+// If try_read is enabled, it also attempts to decompress the first few bytes
+// to help verify the gzip stream is valid.
 func performScan(thread int, position []uint64, fil *os.File, start, end int64) error {
 	thR := &threadReader{
 		atomicPos: &position[thread],
@@ -198,6 +221,9 @@ func performScan(thread int, position []uint64, fil *os.File, start, end int64) 
 	return nil
 }
 
+// makePrintable replaces non-printable bytes in buf with dots.
+// This makes binary data safe to display in log output by converting
+// any byte outside the ASCII printable range (32-126) to '.'.
 func makePrintable(buf []byte) {
 	for n, b := range buf {
 		if b < 32 || b > 126 {
@@ -206,6 +232,9 @@ func makePrintable(buf []byte) {
 	}
 }
 
+// getOsName returns a human-readable name for the gzip OS field.
+// The OS field in a gzip header indicates the operating system or filesystem
+// on which the compression was performed. Values 0-13 are defined in RFC 1952.
 func getOsName(os byte) string {
 	switch os {
 	case 0:

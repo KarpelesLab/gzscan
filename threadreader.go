@@ -6,7 +6,12 @@ import (
 	"sync/atomic"
 )
 
-// this is like https://pkg.go.dev/io#SectionReader but with atomicPos updated
+// threadReader provides concurrent, bounded reading from a file.
+// It is similar to io.SectionReader but additionally updates an atomic
+// position counter, enabling external monitoring of read progress.
+//
+// Each threadReader instance reads from a specific byte range [pos, end)
+// of the underlying file, using ReadAt for thread-safe concurrent access.
 type threadReader struct {
 	atomicPos *uint64
 	pos       int64
@@ -14,6 +19,10 @@ type threadReader struct {
 	f         *os.File
 }
 
+// Read implements io.Reader. It reads up to len(b) bytes from the file
+// starting at the current position, respecting the end boundary. After each
+// read, the atomic position counter is updated to reflect progress.
+// Returns io.EOF when the end boundary is reached.
 func (t *threadReader) Read(b []byte) (int, error) {
 	if int64(len(b))+t.pos > t.end {
 		// reduce b
